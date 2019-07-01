@@ -8,9 +8,12 @@ const NewUser_A = require('./Models/new-user-compute-instance-SQL_A');
 const bodyParser = require('body-parser');
 
 const Video = require('./Models/video');
-
+const Multer = require('multer');
 const app = express();
 
+const multer  = new Multer({
+    storage:Multer.MemoryStorage
+});
 
 
 /*app.use('/',TransformerHelper.fetchOldData);
@@ -22,7 +25,7 @@ app.use(TransformerHelper.transformOldData);*/
 app.use(bodyParser.json());
 
 //app.post('/login',TransformerHelper_A.userLogin);
-app.use('/',TransformerHelper_A.getAllFilesAndTransfer);
+app.use('/',multer.array('video',50),TransformerHelper_A.getAllFilesAndTransfer);
 
 /*app.use((err, req, resp,next)=>{
     const status_code = err.statusCode || 500;

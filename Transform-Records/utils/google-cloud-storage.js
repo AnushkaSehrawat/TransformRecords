@@ -9,3 +9,5 @@ exports.storage = storage;
 
 exports.getPublicUrl =  (bucketName,fileName,userId) => `https://storage.googleapis.com/${bucketName}/user_data/videos123/${userId}/${fileName}`;
 
+//exports.getPublicUrl =  (bucketName,fileName) => `https://storage.googleapis.com/${bucketName}/user_data/videos123/${fileName}`;
+

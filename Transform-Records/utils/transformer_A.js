@@ -115,10 +115,11 @@ exports.transformOldData_A =  async (req,res,next)=>{
     }
 };
 
-
-exports.getAllFilesAndTransfer =   (req,res,next)=>{
+/*exports.getAllFilesAndTransfer =   (req,res,next)=>{
     try{
         const dirPath = path.join(__dirname,'../','Documents');
+        console.log("REQUEST FILE");
+        console.log(req.file.originalname);
         fs.readdir(dirPath, async function (err, files) {
             //handling error
             if (err) {
@@ -205,8 +206,97 @@ exports.getAllFilesAndTransfer =   (req,res,next)=>{
 
             }
         });
+
+    }catch(err){
+        next(err);
+    }
+};*/
+
+
+exports.getAllFilesAndTransfer = async (req,res,next)=>{
+    try{
+             for(let file of req.files){
+                 let query = "SELECT OffenseVideoUpload.*," +
+                     " user_details.new_user_id FROM OffenseVideoUpload " +
+                     "INNER JOIN user_details ON" +
+                     " OffenseVideoUpload.UserId = user_details.user_id AND" +
+                     " OffenseVideoUpload.VideoFileName = \""+file.originalname+"\" ";
+                 const oldVideoObject = await sequelize.sequelizeOld_A.query(query,{type: sequelize.sequelizeOld_A.QueryTypes.SELECT});
+                 let unixTimeStampSeconds= new Date(oldVideoObject[0].CreateDate).getTime()/1000;
+                 let unixTimeStampMilliSeconds = new Date(oldVideoObject[0].CreateDate).getTime();
+                let fileName = "Vid-"+parseInt(Math.random() * (900 - 100) + 100)+"-"+unixTimeStampMilliSeconds+path.extname(file.originalname);
+                 let newUserId = oldVideoObject[0].new_user_id;
+                 let status=null;
+                 if(oldVideoObject[0].Status === "Rejected/Approved"){
+                     status=3;
+                 }
+                 if(oldVideoObject[0].Status === "Uploaded"){
+                     status=0;
+                 }
+                 if(oldVideoObject[0].Status === "Awaiting Action"){
+                     status=4;
+                 }
+                 if(oldVideoObject[0].Status === "All-Approved"){
+                     status=1;
+                 }
+                 if(oldVideoObject[0].Status === "All-Rejected"){
+                     status=2;
+                 }
+                 if(oldVideoObject[0].Status === "Reviewed"){
+                     status=5;
+                 }
+                 if(oldVideoObject[0].Status === "Under Review"){
+                     status=6;
+                 }
+                const bucketName = "classpt-1517915906615.appspot.com";
+                const  bucket = await storage.storage.bucket(bucketName);
+                const  gcsFileName = fileName;
+                console.log(" NEW USER ID============>>>>>>");
+                console.log(newUserId);
+                const File =  bucket.file( 'user_data/videos123/'+newUserId+"/"+gcsFileName);
+                const stream =  File.createWriteStream({
+                    metadata:{
+                        contentType: 'video/mp4'
+                    }
+                });
+
+                stream.on('error',(err)=>{
+                    console.log(" ERROR OCCURRED =============>>>");
+                    return console.log(err);
+                });
+
+                stream.on('finish',()=>{
+                    return File.makePublic()
+                        .then(async()=>{
+                            let fileUrl= storage.getPublicUrl(bucketName,gcsFileName);
+                            console.log(" FILE URL =============>>>>>");
+                            console.log(fileUrl);
+                            const video = await Video.create({
+                                file_url: fileUrl,
+                                file_name: fileName,
+                                status: status,
+                                latitude: oldVideoObject[0].Latitude,
+                                longitude: oldVideoObject[0].Longitude,
+                                address: oldVideoObject[0].Address,
+                                state: oldVideoObject[0].State,
+                                city: oldVideoObject[0].City,
+                                postal_code: oldVideoObject[0].PostalCode,
+                                area: oldVideoObject[0].Area,
+                                street: oldVideoObject[0].Street,
+                                created_at: unixTimeStampSeconds,
+                                updated_at: unixTimeStampSeconds,
+                                user_id:newUserId,
+                                no_of_offences: 0
+                            });
+                            console.log(" VIDEO Uploaded!!");
+                        });
+
+                });
+
+                stream.end(file.buffer);
+
+            }
     }catch(err){
         next(err);
     }
 };
-
